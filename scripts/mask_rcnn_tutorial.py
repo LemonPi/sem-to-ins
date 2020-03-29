@@ -17,6 +17,13 @@ from sem_to_ins.detection_reference.engine import train_one_epoch, evaluate
 
 import random
 import torch
+import logging
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO,
+                    format='[%(levelname)s %(asctime)s %(pathname)s:%(lineno)d] %(message)s',
+                    datefmt='%m-%d %H:%M:%S')
+logging.getLogger('matplotlib.font_manager').disabled = True
 
 
 def get_device():
@@ -189,6 +196,8 @@ def get_transform(train):
 
 def main():
     device = get_device()
+    checkpoint = ''
+    train_after_loading = False
 
     # our dataset has two classes only - background and person
     # num_classes = 2
@@ -227,20 +236,46 @@ def main():
                                                    step_size=3,
                                                    gamma=0.1)
 
-    # let's train it for 10 epochs
-    num_epochs = 10
+    # load our model if it exists
+    loaded_model = load(checkpoint, model, optimizer)
 
-    for epoch in range(num_epochs):
-        # train for one epoch, printing every 10 iterations
-        train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq=10)
-        # update the learning rate
-        lr_scheduler.step()
-        # evaluate on the test dataset
-        evaluate(model, data_loader_test, device=device)
+    if not loaded_model or train_after_loading:
+        num_epochs = 10
 
-    # TODO save and load the model
+        for epoch in range(num_epochs):
+            # train for one epoch, printing every 10 iterations
+            train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq=10)
+            # update the learning rate
+            lr_scheduler.step()
+            # evaluate on the test dataset
+            evaluate(model, data_loader_test, device=device)
+            save(model, optimizer, 'cleargrasp', epoch)
+
     # TODO show evaluation results on an example image
     print("That's it!")
+
+
+def save(model, optimizer, name, epoch):
+    state = {
+        'state_dict': model.state_dict(),
+        'optimizer': optimizer.state_dict(),
+    }
+    base_dir = os.path.join(cfg.ROOT_DIR, 'checkpoints')
+    if not os.path.isdir(base_dir):
+        os.makedirs(base_dir, exist_ok=True)
+    full_name = os.path.join(base_dir, '{}.{}.tar'.format(name, epoch))
+    torch.save(state, full_name)
+    logger.info("saved checkpoint %s", full_name)
+
+
+def load(filename, model, optimizer):
+    if not os.path.isfile(filename):
+        return False
+    checkpoint = torch.load(filename)
+    model.load_state_dict(checkpoint['state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer'])
+    logger.info("loaded checkpoint %s", filename)
+    return True
 
 
 if __name__ == "__main__":
