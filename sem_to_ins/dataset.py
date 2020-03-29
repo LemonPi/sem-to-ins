@@ -70,7 +70,7 @@ class CleargraspSyntheticDataset(torch.utils.data.Dataset):
             boxes.append([xmin, ymin, xmax, ymax])
 
         boxes = torch.as_tensor(boxes, dtype=torch.float32)
-        # there is only one class
+        # there is only one class in the image (all of label type)
         labels = torch.ones((num_objs,), dtype=torch.int64) * label
         masks = torch.as_tensor(masks, dtype=torch.uint8)
 

@@ -188,13 +188,15 @@ def get_transform(train):
 
 
 def main():
-    # train on the GPU or on the CPU, if a GPU is not available
-    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+    device = get_device()
 
     # our dataset has two classes only - background and person
-    num_classes = 2
-    dataset = PennFudanDataset(os.path.join(cfg.DATA_DIR, 'PennFudanPed/'), get_transform(train=True))
-    dataset_test = PennFudanDataset(os.path.join(cfg.DATA_DIR, 'PennFudanPed/'), get_transform(train=False))
+    # num_classes = 2
+    # dataset = PennFudanDataset(os.path.join(cfg.DATA_DIR, 'PennFudanPed/'), get_transform(train=True))
+    # dataset_test = PennFudanDataset(os.path.join(cfg.DATA_DIR, 'PennFudanPed/'), get_transform(train=False))
+    dataset = CleargraspSyntheticDataset(os.path.join(cfg.DATA_DIR, 'synthetic-val/'), get_transform(train=True))
+    dataset_test = CleargraspSyntheticDataset(os.path.join(cfg.DATA_DIR, 'synthetic-val/'), get_transform(train=False))
+    num_classes = len(dataset.class_dirs) + 1
 
     # split the dataset in train and test set
     indices = torch.randperm(len(dataset)).tolist()
@@ -236,6 +238,8 @@ def main():
         # evaluate on the test dataset
         evaluate(model, data_loader_test, device=device)
 
+    # TODO save and load the model
+    # TODO show evaluation results on an example image
     print("That's it!")
 
 
