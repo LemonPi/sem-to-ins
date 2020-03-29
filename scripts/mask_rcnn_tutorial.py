@@ -189,8 +189,11 @@ def main():
     # num_classes = 2
     # dataset = PennFudanDataset(os.path.join(cfg.DATA_DIR, 'PennFudanPed/'), get_transform(train=True))
     # dataset_test = PennFudanDataset(os.path.join(cfg.DATA_DIR, 'PennFudanPed/'), get_transform(train=False))
+    # name = 'pennfudanped'
+    # class_names = ['background', 'person']
     dataset = CleargraspSyntheticDataset(os.path.join(cfg.DATA_DIR, 'synthetic-val/'), get_transform(train=True))
     dataset_test = CleargraspSyntheticDataset(os.path.join(cfg.DATA_DIR, 'synthetic-val/'), get_transform(train=False))
+    name = 'cleargrasp_synthetic'
     class_names = dataset.class_names()
     num_classes = len(class_names)
 
@@ -238,7 +241,7 @@ def main():
             lr_scheduler.step()
             # evaluate on the test dataset
             evaluate(model, data_loader_test, device=device)
-            save(model, optimizer, 'cleargrasp', epoch)
+            save(model, optimizer, name, epoch)
 
     model.eval()
     instance_segmentation_api(dataset_test.dataset.get_image_full_path(indices_test[test_index]), model, threshold,
