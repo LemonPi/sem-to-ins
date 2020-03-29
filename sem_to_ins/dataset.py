@@ -7,6 +7,10 @@ import torch
 
 
 class CleargraspSyntheticDataset(torch.utils.data.Dataset):
+    IMG = 0
+    SEM_MASK = 1
+    INS_MASK = 2
+
     def __init__(self, root, transforms=None, allowed_class_dirs=None):
         self.root = root
         self.transforms = transforms
@@ -15,10 +19,8 @@ class CleargraspSyntheticDataset(torch.utils.data.Dataset):
         if allowed_class_dirs:
             self.class_dirs = allowed_class_dirs
 
-        self.imgs = []
-        self.sem_masks = []
-        self.ins_masks = []
         self.img_type_names = ["rgb-imgs", "segmentation-masks", "variant-masks"]
+        self.img_type_paths = [[], [], []]
         self.classes = []
 
         # load all image files, sorting them to
@@ -27,19 +29,26 @@ class CleargraspSyntheticDataset(torch.utils.data.Dataset):
             imgs, sem, ins = [list(sorted(os.listdir(os.path.join(root, class_name, img_type)))) for img_type in
                               self.img_type_names]
             assert len(imgs) == len(sem)
-            self.imgs += imgs
-            self.sem_masks += sem
-            self.ins_masks += ins
+            self.img_type_paths[self.IMG] += imgs
+            self.img_type_paths[self.SEM_MASK] += sem
+            self.img_type_paths[self.INS_MASK] += ins
             self.classes += [class_name] * len(imgs)
+
+    def class_names(self):
+        return ['background'] + self.class_dirs
+
+    def get_image_full_path(self, idx, image_type=IMG):
+        return os.path.join(self.root, self.classes[idx], self.img_type_names[image_type],
+                            self.img_type_paths[image_type][idx])
 
     def __getitem__(self, idx):
         # load images ad masks
         this_class = self.classes[idx]
         # only 1 class of objects per image (and the object class doesn't seem to be encoded in the instance seg)
         label = self.class_dirs.index(this_class) + 1
-        img_path = os.path.join(self.root, this_class, self.img_type_names[0], self.imgs[idx])
-        seg_mask_path = os.path.join(self.root, this_class, self.img_type_names[1], self.sem_masks[idx])
-        ins_mask_path = os.path.join(self.root, this_class, self.img_type_names[2], self.ins_masks[idx])
+        img_path = self.get_image_full_path(idx, self.IMG)
+        seg_mask_path = self.get_image_full_path(idx, self.SEM_MASK)
+        ins_mask_path = self.get_image_full_path(idx, self.INS_MASK)
         img = Image.open(img_path).convert("RGB")
         # TODO train on semantic segmentation instead of RGB
         # note that we haven't converted the mask to RGB,
@@ -93,4 +102,4 @@ class CleargraspSyntheticDataset(torch.utils.data.Dataset):
         return img, target
 
     def __len__(self):
-        return len(self.imgs)
+        return len(self.img_type_paths[self.IMG])
